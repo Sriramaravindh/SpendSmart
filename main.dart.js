@@ -9129,7 +9129,7 @@ case 3:s=5
 return A.d(A.Hf(),$async$ame)
 case 5:p=b
 n=$.bc9
-if(n==null)n=$.bc9=A.bce($.ad8(),A.bcd(1024,0.7),"gemini-3.8-flash")
+if(n==null)n=$.bc9=A.bce($.ad8(),A.bcd(1024,0.7),"gemini-3.5-flash")
 o=t.Uz
 o=A.a([new A.ju("user",A.a([new A.jQ(p)],o)),new A.ju("model",A.O(A.a([new A.jQ(u.F)],o),!0,t.z2))],t.kQ)
 n=$.b5M=new A.TA(n.ga9B(),new A.atL(A.ld(null,t.v4)),o,null,null)
@@ -9188,7 +9188,7 @@ i=A.p(n)
 h=a.length===0?"Scan this receipt and help me add the expense.":a
 m=i+'\n\nThe user uploaded an image (likely a receipt, bill, or expense document).\n1. Extract: amounts, items, date, shop/vendor name\n2. Summarize what you see\n3. Suggest adding it as an expense using the action block format\n4. NEVER say "added" \u2014 say "tap Confirm to save"\n\nUser message: '+h+"\n"
 i=$.bca
-if(i==null)i=$.bca=A.bce($.ad8(),A.bcd(1024,0.3),"gemini-3.8-flash")
+if(i==null)i=$.bca=A.bce($.ad8(),A.bcd(1024,0.3),"gemini-3.5-flash")
 s=8
 return A.d(i.St(A.a([new A.ju("user",A.O(A.a([new A.jQ(m),new A.Up(c,b)],t.Uz),!0,t.z2))],t.kQ)),$async$VX)
 case 8:l=e
