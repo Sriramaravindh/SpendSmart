@@ -61352,18 +61352,15 @@ a=A.dz(new A.aw(B.bm,A.ax(A.a([A.C("OVERALL FINANCIAL SUMMARY",b0,b0,b0,b0,A.aK(
 a2=b?s.k2:j
 a3=A.C("LOAN DETAILS",b0,b0,b0,b0,A.aK(b0,b0,a0,b0,b0,b0,b0,b0,b0,b0,b0,13,b0,b0,B.ap,b0,b0,!0,b0,1,b0,b0,b0,b0,b0,b0),b0,b0)
 a4=a9.jA(b3.d)
-a5=r.length
-a6=b3.f
-a7=""+a6
-a5=a5!==a6?a7+" \u2192 "+a5+" months":a7+" months"
+a5=""+b3.f
 a6=b3.Q
 if(a6==null)a6=b3.x
 a6=A.eL(b1,b0).cf(a6)
 a7=A.eL(b1,b0).cf(b3.x)
 a8=b3.y?"Active":"Closed"
-a8=A.a([a3,B.aV,new A.hX("Monthly EMI",a4,b0),new A.hX("Current Rate",A.p(f)+"% p.a.",b0),new A.hX("Tenure",a5,b0),new A.hX("EMI Day",""+b3.r+" of each month",b0),new A.hX("Disbursement Date",a6,b0),new A.hX("First EMI Date",a7,b0),new A.hX("Status",a8,b0),new A.hX("EMIs Paid",""+m+" / "+r.length,b0)],a1)
-if(b2>0)a8.push(new A.hX("Pre-EMI Interest",a9.jA(b2),b0))
-b2=A.a([d,B.az,e,B.b2,c,B.az,a,B.az,A.dz(new A.aw(B.bm,A.ax(a8,B.ab,B.A,B.G),b0),b0,a2,b0,b0,b0,b0)],a1)
+a5=A.a([a3,B.aV,new A.hX("Monthly EMI",a4,b0),new A.hX("Current Rate",A.p(f)+"% p.a.",b0),new A.hX("Tenure",a5+" months",b0),new A.hX("EMI Day",""+b3.r+" of each month",b0),new A.hX("Disbursement Date",a6,b0),new A.hX("First EMI Date",a7,b0),new A.hX("Status",a8,b0),new A.hX("EMIs Paid",""+m+" / "+a5,b0)],a1)
+if(b2>0)a5.push(new A.hX("Pre-EMI Interest",a9.jA(b2),b0))
+b2=A.a([d,B.az,e,B.b2,c,B.az,a,B.az,A.dz(new A.aw(B.bm,A.ax(a5,B.ab,B.A,B.G),b0),b0,a2,b0,b0,b0,b0)],a1)
 if(g.gq(i)>1){if(b)j=s.k2
 a0=A.a([A.C("RATE HISTORY",b0,b0,b0,b0,A.aK(b0,b0,a0,b0,b0,b0,b0,b0,b0,b0,b0,13,b0,b0,B.ap,b0,b0,!0,b0,1,b0,b0,b0,b0,b0,b0),b0,b0),B.aV],a1)
 B.l.K(a0,g.dU(i,new A.aWq(),t.l))
