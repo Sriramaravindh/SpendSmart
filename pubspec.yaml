@@ -1,0 +1,93 @@
+name: expense_tracker
+description: "SpendSmart - Smart household expense tracker"
+publish_to: 'none'
+version: 1.0.0+1
+
+environment:
+  sdk: ^3.5.3
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+  cupertino_icons: ^1.0.8
+
+  # State Management
+  flutter_riverpod: ^2.5.1
+  riverpod_annotation: ^2.3.5
+
+  # Database
+  sqflite: ^2.3.3
+  sqflite_common_ffi_web: ^0.4.5+2
+  idb_sqflite: ^1.0.0+3
+  path: ^1.9.0
+
+  # Navigation
+  go_router: ^14.2.7
+
+  # Charts
+  fl_chart: ^0.68.0
+
+  # Google Sign-in & Drive
+  google_sign_in: ^6.2.1
+  googleapis: ^13.2.0
+  googleapis_auth: ^1.6.0
+  http: ^1.2.2
+
+  # Excel Export
+  excel: ^4.0.6
+
+  # Preferences
+  shared_preferences: ^2.3.2
+
+  # Date/Time formatting
+  intl: ^0.19.0
+
+  # File operations
+  path_provider: ^2.1.4
+  share_plus: ^10.0.2
+  file_picker: ^8.1.2
+
+  # PDF Generation & Printing
+  pdf: ^3.11.1
+  printing: ^5.13.2
+
+  # JSON
+  json_annotation: ^4.9.0
+
+  # UUID
+  uuid: ^4.5.0
+
+  # Gemini AI
+  google_generative_ai: ^0.4.6
+
+  # Voice
+  speech_to_text: ^6.6.0
+  flutter_tts: ^4.2.0
+
+  # Image picker
+  image_picker: ^1.1.2
+
+  # Local notifications (due-date reminders) + timezone for zonedSchedule
+  # NOTE: after adding these, run `flutter pub get` (and `pod install` for iOS).
+  flutter_local_notifications: ^17.2.3
+  timezone: ^0.9.4
+
+  # Biometric / device-credential app lock
+  local_auth: ^2.3.0
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  # Real-browser / on-device end-to-end UI automation (flutter drive).
+  integration_test:
+    sdk: flutter
+  flutter_lints: ^4.0.0
+  build_runner: ^2.4.12
+  json_serializable: ^6.8.0
+  # Desktop/headless sqflite implementation for running repository + E2E UI
+  # tests under `flutter test`.
+  sqflite_common_ffi: ^2.3.0
+
+flutter:
+  uses-material-design: true
