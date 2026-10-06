@@ -378,10 +378,13 @@ class _AiChatScreenState extends ConsumerState<AiChatScreen> {
     final isSending = ref.watch(isSendingProvider);
     final categoriesAsync = ref.watch(categoriesProvider);
     final paymentMethodsAsync = ref.watch(paymentMethodsProvider);
+    final tagsAsync = ref.watch(tagsProvider);
     final catList = categoriesAsync.valueOrNull ?? [];
     final pmList = paymentMethodsAsync.valueOrNull ?? [];
+    final tagList = tagsAsync.valueOrNull ?? [];
     final catMaps = catList.map((c) => {'id': c.id, 'name': c.name, 'type': c.type}).toList();
     final pmMaps = pmList.map((p) => {'id': p.id, 'name': p.name, 'type': p.type}).toList();
+    final tagMaps = tagList.map((t) => {'id': t.id, 'name': t.name}).toList();
 
     return Scaffold(
       appBar: AppBar(
@@ -495,6 +498,7 @@ class _AiChatScreenState extends ConsumerState<AiChatScreen> {
                             isSpeaking: _isSpeaking,
                             categories: catMaps,
                             paymentMethods: pmMaps,
+                            tags: tagMaps,
                             onUpdateAction: msg.actions.isNotEmpty && msg.actionsExecuted.any((e) => !e)
                                 ? (actionIdx, updated) {
                                     ref.read(chatNotifierProvider.notifier).updateAction(index, actionIdx, updated);
@@ -699,6 +703,7 @@ class _MessageBubble extends StatelessWidget {
   final void Function(int actionIndex, Map<String, dynamic> updated)? onUpdateAction;
   final List<Map<String, dynamic>> categories;
   final List<Map<String, dynamic>> paymentMethods;
+  final List<Map<String, dynamic>> tags;
 
   const _MessageBubble({
     required this.message,
@@ -713,6 +718,7 @@ class _MessageBubble extends StatelessWidget {
     this.onUpdateAction,
     this.categories = const [],
     this.paymentMethods = const [],
+    this.tags = const [],
   });
 
   String _currencySymbol(String? code) {
@@ -782,6 +788,9 @@ class _MessageBubble extends StatelessWidget {
           }),
           _editableRow(context, Icons.note_outlined, 'Note', '${act['note'] ?? 'No note'}', () {
             _showNoteEditor(context, act, actionIndex);
+          }),
+          _editableRow(context, Icons.label_outline, 'Group', '${act['tag'] ?? 'None'}', () {
+            _showTagPicker(context, act, actionIndex);
           }),
           _editableRow(context, Icons.calendar_today_outlined, 'Date', '${act['date'] ?? 'Today'}', () {
             _showDatePicker(context, act, actionIndex);
@@ -968,6 +977,60 @@ class _MessageBubble extends StatelessWidget {
                     },
                   );
                 },
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showTagPicker(BuildContext context, Map<String, dynamic> act, int actionIndex) {
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+      builder: (ctx) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Padding(
+              padding: EdgeInsets.all(16),
+              child: Text('Select Expense Group', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 16)),
+            ),
+            Flexible(
+              child: ListView(
+                shrinkWrap: true,
+                children: [
+                  // "None" clears the tag.
+                  ListTile(
+                    leading: Icon(Icons.block, size: 16,
+                        color: act['tag'] == null ? colorScheme.primary : Colors.grey),
+                    title: const Text('None'),
+                    selected: act['tag'] == null,
+                    onTap: () {
+                      final updated = Map<String, dynamic>.from(act);
+                      updated.remove('tag');
+                      onUpdateAction?.call(actionIndex, updated);
+                      Navigator.pop(ctx);
+                    },
+                  ),
+                  ...tags.map((t) {
+                    final name = t['name'] as String;
+                    final isSelected = name == act['tag'];
+                    return ListTile(
+                      leading: Icon(Icons.label, size: 14,
+                          color: isSelected ? colorScheme.primary : Colors.grey),
+                      title: Text(name),
+                      selected: isSelected,
+                      onTap: () {
+                        final updated = Map<String, dynamic>.from(act);
+                        updated['tag'] = name;
+                        onUpdateAction?.call(actionIndex, updated);
+                        Navigator.pop(ctx);
+                      },
+                    );
+                  }),
+                ],
               ),
             ),
           ],

@@ -1,22 +1,24 @@
 import 'dart:convert';
 import 'dart:typed_data';
 import 'package:flutter/foundation.dart' hide Category;
-import 'package:google_generative_ai/google_generative_ai.dart';
+import 'package:http/http.dart' as http;
 import '../../data/models.dart';
 import '../../data/repositories/expense_repository.dart';
 import '../../data/repositories/category_repository.dart';
 import '../../data/repositories/payment_method_repository.dart';
+import '../../data/repositories/tag_repository.dart';
 import '../../core/utils/date_utils.dart';
 import '../../core/utils/currency_formatter.dart';
 
 class GeminiService {
-  // The Gemini API key is supplied at build/run time, never committed in source:
-  //   flutter run   --dart-define=GEMINI_API_KEY=your_key
-  //   flutter build web --dart-define=GEMINI_API_KEY=your_key
-  static const _apiKey = String.fromEnvironment('GEMINI_API_KEY');
+  // The Gemini API key is NEVER in the app. It lives only as a Cloudflare
+  // Worker secret. The app only needs the proxy URL, supplied at build/run time:
+  //   flutter run   --dart-define=GEMINI_PROXY_URL=https://your-worker.workers.dev
+  //   flutter build web --dart-define=GEMINI_PROXY_URL=https://your-worker.workers.dev
+  static const _proxyUrl = String.fromEnvironment('GEMINI_PROXY_URL');
 
-  /// Whether an API key was provided at build time.
-  static bool get isConfigured => _apiKey.isNotEmpty;
+  /// Whether the Gemini proxy URL was provided at build time.
+  static bool get isConfigured => _proxyUrl.isNotEmpty;
 
   static const _modelFallbacks = [
     'gemini-3.5-flash-lite',
@@ -27,9 +29,11 @@ class GeminiService {
   static final _expenseRepo = ExpenseRepository();
   static final _categoryRepo = CategoryRepository();
   static final _paymentMethodRepo = PaymentMethodRepository();
+  static final _tagRepo = TagRepository();
 
   static List<Category> _cachedCategories = [];
   static List<PaymentMethod> _cachedPaymentMethods = [];
+  static List<Tag> _cachedTags = [];
   static Future<void>? _loadingFuture;
 
   // When false, PII-sensitive free text (transaction notes / recent
@@ -37,19 +41,10 @@ class GeminiService {
   // from a saved preference to grant consent.
   static bool shareTransactionContext = false;
 
-  static GenerativeModel _createModel(String modelName, {double temp = 0.7}) {
-    return GenerativeModel(
-      model: modelName,
-      apiKey: _apiKey,
-      generationConfig: GenerationConfig(
-        temperature: temp,
-        maxOutputTokens: 32768,
-      ),
-    );
-  }
-
   static Future<void> _loadCaches() async {
-    if (_cachedCategories.isNotEmpty && _cachedPaymentMethods.isNotEmpty) return;
+    if (_cachedCategories.isNotEmpty &&
+        _cachedPaymentMethods.isNotEmpty &&
+        _cachedTags.isNotEmpty) return;
     // Memoize the in-flight load so concurrent callers share one load instead
     // of racing (which could leave caches half-populated).
     if (_loadingFuture != null) {
@@ -63,6 +58,9 @@ class GeminiService {
       if (_cachedPaymentMethods.isEmpty) {
         _cachedPaymentMethods = await _paymentMethodRepo.getAll();
       }
+      if (_cachedTags.isEmpty) {
+        _cachedTags = await _tagRepo.getAll();
+      }
     }();
     try {
       await _loadingFuture;
@@ -74,6 +72,7 @@ class GeminiService {
   static void refreshCaches() {
     _cachedCategories = [];
     _cachedPaymentMethods = [];
+    _cachedTags = [];
     _loadingFuture = null;
   }
 
@@ -99,6 +98,7 @@ class GeminiService {
     await _loadCaches();
     final categories = _cachedCategories;
     final paymentMethods = _cachedPaymentMethods;
+    final tags = _cachedTags;
     final now = DateTime.now();
     final monthStart = AppDateUtils.monthStart();
     final monthEnd = AppDateUtils.monthEnd();
@@ -157,6 +157,9 @@ ${incomeCategories.map((c) => '${c.id}: ${c.name}').join(', ')}
 PAYMENT METHODS (id: name):
 ${paymentMethods.map((p) => '${p.id}: ${p.name} [${p.type}]').join(', ')}
 
+EXPENSE GROUPS (tags) — use the exact name as the "tag" field when relevant:
+${tags.isEmpty ? 'none' : tags.map((t) => t.name).join(', ')}
+
 THIS MONTH SUMMARY:
 Income: $defaultSym${totalIncome.toStringAsFixed(0)} | Expense: $defaultSym${totalExpense.toStringAsFixed(0)} | Balance: $defaultSym${(totalIncome - totalExpense).toStringAsFixed(0)}
 ${topCategories.isNotEmpty ? 'Top spending: ${topCategories.take(5).map((e) => '${e.key} $defaultSym${e.value.toStringAsFixed(0)}').join(', ')}' : ''}
@@ -191,6 +194,7 @@ RULES:
    - "2000 yen" or "¥2000" → currency: "JPY". "\$50" → currency: "USD". No currency mentioned → "$defaultCurrency"
 9. INCOMPLETE INFO: If user says "movie 500", still create the action with best guesses. Don't ask for missing info.
 10. INCOME: For salary, freelance, etc., use expenseType: "INCOME" and pick from income categories.
+11. GROUPS (optional): If the expense clearly belongs to an EXPENSE GROUP listed above, add a "tag" field with that exact group name (e.g. {"tag":"Home Expense"}). Omit "tag" if none fits. The user can edit the group before confirming.
 
 SPENDING QUERIES:
 - Answer using the RECENT TRANSACTIONS and SUMMARY data above — be specific with real numbers
@@ -222,9 +226,13 @@ PERSONALITY:
     final context = await _getContextPrompt();
     final fullPrompt = '$context\n\nUser message: $message';
 
-    return _callWithFallback(
-      (model) => model.generateContent([Content.text(fullPrompt)]),
-    );
+    return _callWithFallback([
+      {
+        'parts': [
+          {'text': fullPrompt},
+        ],
+      },
+    ]);
   }
 
   // -----------------------------------------------------------------------
@@ -232,7 +240,8 @@ PERSONALITY:
   // -----------------------------------------------------------------------
   static const _notConfiguredMessage =
       '🔑 AI is not configured. Build the app with '
-      '--dart-define=GEMINI_API_KEY=your_key to enable the assistant.';
+      '--dart-define=GEMINI_PROXY_URL=https://your-worker.workers.dev '
+      'to enable the assistant.';
 
   static Future<String> sendImageMessage(String message, Uint8List imageBytes, String mimeType) async {
     if (!isConfigured) return _notConfiguredMessage;
@@ -249,62 +258,96 @@ The user uploaded an image (likely a receipt, bill, or expense document).
 User message: ${message.isEmpty ? "Scan this receipt and help me add the expense." : message}
 ''';
 
-    return _callWithFallback(
-      (model) => model.generateContent([
-        Content.multi([
-          TextPart(prompt),
-          DataPart(mimeType, imageBytes),
-        ]),
-      ]),
-    );
+    return _callWithFallback([
+      {
+        'parts': [
+          {'text': prompt},
+          {
+            'inlineData': {
+              'mimeType': mimeType,
+              'data': base64Encode(imageBytes),
+            },
+          },
+        ],
+      },
+    ]);
   }
 
   // -----------------------------------------------------------------------
-  // Core: call Gemini with automatic model fallback
+  // Core: call the Cloudflare Worker proxy with automatic model fallback.
+  // The proxy holds the Gemini API key; we only send { model, contents }.
+  // `contents` is the Gemini REST contents array.
   // -----------------------------------------------------------------------
   static Future<String> _callWithFallback(
-    Future<GenerateContentResponse> Function(GenerativeModel model) apiCall,
+    List<Map<String, dynamic>> contents,
   ) async {
     String lastError = '';
 
     for (var i = 0; i < _modelFallbacks.length; i++) {
       final modelName = _modelFallbacks[i];
       try {
-        final model = _createModel(modelName);
-        final response = await apiCall(model);
-        final text = response.text;
-        if (text != null && text.isNotEmpty) return text;
-        return 'I got an empty response. Please try again.';
+        final response = await http.post(
+          Uri.parse('$_proxyUrl/generate'),
+          headers: {'Content-Type': 'application/json'},
+          body: jsonEncode({'model': modelName, 'contents': contents}),
+        );
+
+        final status = response.statusCode;
+        final rawBody = response.body;
+
+        if (status == 200) {
+          final json = jsonDecode(rawBody) as Map<String, dynamic>;
+          String? text;
+          try {
+            text = json['candidates'][0]['content']['parts'][0]['text']
+                as String?;
+          } catch (_) {
+            text = null;
+          }
+          if (text != null && text.isNotEmpty) return text;
+          return 'I got an empty response. Please try again.';
+        }
+
+        // Non-200: treat the body as the error description.
+        lastError = 'HTTP $status: $rawBody';
+        debugPrint('GeminiService: Model $modelName failed: $lastError');
+
+        if (status == 429 ||
+            rawBody.contains('quota') ||
+            rawBody.contains('RESOURCE_EXHAUSTED')) {
+          return '⏳ Rate limit reached. Please wait a minute and try again.\n\nFree tier: 15 requests/min, 500/day.';
+        }
+        if (rawBody.contains('API_KEY') ||
+            rawBody.contains('PERMISSION_DENIED') ||
+            rawBody.contains('authentication')) {
+          return '🔑 API key error. Please contact the app developer.';
+        }
+
+        final isModelError = status == 503 ||
+            status == 404 ||
+            rawBody.contains('not found') ||
+            rawBody.contains('not available') ||
+            rawBody.contains('no longer available') ||
+            rawBody.contains('Server Error') ||
+            rawBody.contains('UNAVAILABLE');
+
+        if (isModelError && i < _modelFallbacks.length - 1) {
+          debugPrint('GeminiService: Falling back from $modelName to ${_modelFallbacks[i + 1]}');
+          continue;
+        }
       } catch (e) {
         final msg = e.toString();
         lastError = msg;
         debugPrint('GeminiService: Model $modelName failed: $msg');
-
-        if (msg.contains('quota') || msg.contains('429') || msg.contains('RESOURCE_EXHAUSTED')) {
-          return '⏳ Rate limit reached. Please wait a minute and try again.\n\nFree tier: 15 requests/min, 500/day.';
-        }
-        if (msg.contains('API_KEY') || msg.contains('PERMISSION_DENIED') || msg.contains('authentication')) {
-          return '🔑 API key error. Please contact the app developer.';
-        }
-
-        final isModelError = msg.contains('503') ||
-            msg.contains('404') ||
-            msg.contains('not found') ||
-            msg.contains('not available') ||
-            msg.contains('no longer available') ||
-            msg.contains('Server Error') ||
-            msg.contains('UNAVAILABLE');
-
-        if (isModelError && i < _modelFallbacks.length - 1) {
+        // Network/transport error — try the next model if any remain.
+        if (i < _modelFallbacks.length - 1) {
           debugPrint('GeminiService: Falling back from $modelName to ${_modelFallbacks[i + 1]}');
           continue;
         }
       }
     }
 
-    final safeError =
-        isConfigured ? lastError.replaceAll(_apiKey, '***') : lastError;
-    final truncated = safeError.length > 120 ? safeError.substring(0, 120) : safeError;
+    final truncated = lastError.length > 120 ? lastError.substring(0, 120) : lastError;
     return '❌ All AI models are currently unavailable. Please try again in a few minutes.\n\nError: $truncated';
   }
 

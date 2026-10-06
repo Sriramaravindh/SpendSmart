@@ -58,8 +58,8 @@ dependencies:
   # UUID
   uuid: ^4.5.0
 
-  # Gemini AI
-  google_generative_ai: ^0.4.6
+  # Gemini AI is accessed over HTTP via the Cloudflare Worker proxy
+  # (see cloudflare-proxy/) using the `http` package above; no SDK needed.
 
   # Voice
   speech_to_text: ^6.6.0

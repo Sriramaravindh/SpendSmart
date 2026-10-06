@@ -1,0 +1,13 @@
+{
+  "name": "spendsmart-gemini-proxy",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Cloudflare Worker proxy for the Gemini API (keeps the API key server-side).",
+  "scripts": {
+    "deploy": "wrangler deploy",
+    "dev": "wrangler dev"
+  },
+  "devDependencies": {
+    "wrangler": "^3.80.0"
+  }
+}
