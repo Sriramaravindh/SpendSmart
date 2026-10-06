@@ -34,6 +34,9 @@ dependencies:
   googleapis_auth: ^1.6.0
   http: ^1.2.2
 
+  # Markdown rendering for AI chat responses (bold, bullet lists, etc.)
+  flutter_markdown: ^0.7.3
+
   # Excel Export
   excel: ^4.0.6
 

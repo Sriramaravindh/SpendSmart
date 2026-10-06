@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_markdown/flutter_markdown.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:speech_to_text/speech_to_text.dart' as stt;
@@ -1196,14 +1197,45 @@ class _MessageBubble extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  SelectableText(
-                    message.text,
-                    style: TextStyle(
-                      color: isUser ? colorScheme.onPrimary : colorScheme.onSurface,
-                      fontSize: 14,
-                      height: 1.45,
+                  // User messages are plain text; AI replies are Markdown
+                  // (bold, bullet lists, etc.) so render them properly instead
+                  // of showing raw ** / * characters.
+                  if (isUser)
+                    SelectableText(
+                      message.text,
+                      style: TextStyle(
+                        color: colorScheme.onPrimary,
+                        fontSize: 14,
+                        height: 1.45,
+                      ),
+                    )
+                  else
+                    MarkdownBody(
+                      data: message.text,
+                      selectable: true,
+                      styleSheet: MarkdownStyleSheet.fromTheme(Theme.of(context)).copyWith(
+                        p: TextStyle(
+                          color: colorScheme.onSurface,
+                          fontSize: 14,
+                          height: 1.45,
+                        ),
+                        listBullet: TextStyle(
+                          color: colorScheme.onSurface,
+                          fontSize: 14,
+                          height: 1.45,
+                        ),
+                        strong: TextStyle(
+                          color: colorScheme.onSurface,
+                          fontSize: 14,
+                          fontWeight: FontWeight.w700,
+                        ),
+                        code: TextStyle(
+                          color: colorScheme.onSurface,
+                          backgroundColor: colorScheme.surfaceContainerHighest,
+                          fontSize: 13,
+                        ),
+                      ),
                     ),
-                  ),
                   const SizedBox(height: 4),
                   Text(
                     timeStr,
