@@ -10,13 +10,13 @@ import '../../core/utils/date_utils.dart';
 import '../../core/utils/currency_formatter.dart';
 
 class GeminiService {
-  static final _apiKey = _k.join();
-  static const _k = [
-    'AQ.Ab8RN6JMeQ',
-    '1D3eIiucQLa91',
-    'kwzFIKe6S5qNU',
-    '7B1QlIvFVBw_3g',
-  ];
+  // The Gemini API key is supplied at build/run time, never committed in source:
+  //   flutter run   --dart-define=GEMINI_API_KEY=your_key
+  //   flutter build web --dart-define=GEMINI_API_KEY=your_key
+  static const _apiKey = String.fromEnvironment('GEMINI_API_KEY');
+
+  /// Whether an API key was provided at build time.
+  static bool get isConfigured => _apiKey.isNotEmpty;
 
   static const _modelFallbacks = [
     'gemini-3.5-flash-lite',
@@ -218,6 +218,7 @@ PERSONALITY:
   // Send text message — stateless (fresh context every call, always accurate)
   // -----------------------------------------------------------------------
   static Future<String> sendMessage(String message) async {
+    if (!isConfigured) return _notConfiguredMessage;
     final context = await _getContextPrompt();
     final fullPrompt = '$context\n\nUser message: $message';
 
@@ -229,7 +230,12 @@ PERSONALITY:
   // -----------------------------------------------------------------------
   // Send image message
   // -----------------------------------------------------------------------
+  static const _notConfiguredMessage =
+      '🔑 AI is not configured. Build the app with '
+      '--dart-define=GEMINI_API_KEY=your_key to enable the assistant.';
+
   static Future<String> sendImageMessage(String message, Uint8List imageBytes, String mimeType) async {
+    if (!isConfigured) return _notConfiguredMessage;
     final context = await _getContextPrompt();
     final prompt = '''
 $context
@@ -296,7 +302,8 @@ User message: ${message.isEmpty ? "Scan this receipt and help me add the expense
       }
     }
 
-    final safeError = lastError.replaceAll(_apiKey, '***');
+    final safeError =
+        isConfigured ? lastError.replaceAll(_apiKey, '***') : lastError;
     final truncated = safeError.length > 120 ? safeError.substring(0, 120) : safeError;
     return '❌ All AI models are currently unavailable. Please try again in a few minutes.\n\nError: $truncated';
   }
