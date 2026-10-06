@@ -703,10 +703,10 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
           ],
         ),
         trailing: Text(
-          CurrencyFormatter.formatWithCurrency(expense.amount, expense.currency),
+          '${expense.isIncome ? '+' : '-'}${CurrencyFormatter.formatWithCurrency(expense.amount, expense.currency)}',
           style: theme.textTheme.titleMedium?.copyWith(
             fontWeight: FontWeight.w600,
-            color: colorScheme.onSurface,
+            color: expense.isIncome ? AppColors.income : colorScheme.onSurface,
           ),
         ),
       ),
